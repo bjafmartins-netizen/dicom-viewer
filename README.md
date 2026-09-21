@@ -26,7 +26,14 @@ Isso abre uma janela onde você pode selecionar um arquivo DICOM (`.dcm` ou sem 
 
 ## Roadmap
 
-- [ ] Extração e exibição completa de metadados (tags DICOM) em painel dedicado
-- [ ] Suporte a séries/múltiplos arquivos (não só imagem única)
-- [ ] Exportação de imagem (PNG/JPEG) e de metadados (CSV/JSON)
-- [ ] Anonimização de dados do paciente
+Este projeto está evoluindo de visualizador único-arquivo para um miniPACS (Orthanc + OHIF Viewer) com extração de metadados em lote. Veja o plano completo em [`docs/ARQUITETURA.md`](docs/ARQUITETURA.md).
+
+- [ ] Orthanc portátil rodando local (miniPACS)
+- [ ] Módulo `metadata/extract_metadata.py` (extração em lote, CLI, CSV/JSON)
+- [ ] OHIF Viewer compilado, apontando para o Orthanc local
+- [ ] Scripts de automação (`start_all`, `import_folder`)
+- [ ] Anonimização automática na importação
+- [ ] Thumbnails por série
+- [ ] Worklist simulado (didático)
+
+Uso previsto: protótipo de estudo com dados anonimizados/phantoms — sem dados reais de paciente por ora.
