@@ -8,6 +8,11 @@ necessário na hora de compilar, não para usar.
 O build **não está versionado** aqui (são dezenas de MB). Versionado é só o
 `ohif-config.js`, que aponta o viewer para o Orthanc local.
 
+> **Sem Node/Yarn na máquina?** Não precisa compilar nada: use o **Stone Web
+> Viewer**, plugin do próprio Orthanc, que entrega scroll de série,
+> janelamento, medidas e MPR. Instruções em `pacs/README.md`. O OHIF abaixo
+> continua valendo para quem quiser a interface dele ou suas extensões.
+
 ## Compilar (uma vez, numa máquina com Node 18+ e Yarn)
 
 ```bash

@@ -38,6 +38,11 @@
     "SeriesMetadata": "Full"
   },
 
+  "// StoneWebViewer": "Visualizador radiologico servido pelo proprio Orthanc (plugin StoneWebViewer.dll em ./plugins). Abre em /stone-webviewer/index.html. Depende do plugin DICOMweb estar ativo acima. Nao precisa de Node nem de build.",
+  "StoneWebViewer": {
+    "DicomWebRoot": "../dicom-web"
+  },
+
   "// Worklist": "Ligue para simular fluxo de exame agendado (fins didáticos). Coloque os arquivos .wl na pasta apontada.",
   "Worklists": {
     "Enable": false,

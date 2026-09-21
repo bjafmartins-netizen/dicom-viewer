@@ -58,9 +58,12 @@ if [ -d "$OHIF_DIST" ]; then
   python3 -m http.server "$OHIF_PORT" --directory "$OHIF_DIST" >/dev/null 2>&1 &
   PIDS+=($!)
   echo "OHIF no ar:    http://localhost:$OHIF_PORT"
+elif ls "$PACS_DIR"/plugins/*StoneWebViewer* >/dev/null 2>&1; then
+  echo "Build do OHIF não encontrado; use o Stone Web Viewer (plugin do Orthanc):"
+  echo "               http://localhost:$ORTHANC_PORT/stone-webviewer/index.html"
 else
-  echo "AVISO: build do OHIF não encontrado em viewer-ohif/dist (veja viewer-ohif/README.md)."
-  echo "       Use a interface própria do Orthanc enquanto isso."
+  echo "AVISO: nenhum viewer instalado (nem OHIF em viewer-ohif/dist, nem plugin Stone)."
+  echo "       Veja pacs/README.md. A interface própria do Orthanc já mostra as imagens."
 fi
 
 echo ""

@@ -43,6 +43,7 @@ Endereços:
 | API REST | http://localhost:8042/system |
 | DICOMweb (é o que o OHIF consome) | http://localhost:8042/dicom-web |
 | Porta DICOM (C-STORE, AET `MINIPACS`) | 4242 |
+| Stone Web Viewer (se o plugin estiver em `plugins/`) | http://localhost:8042/stone-webviewer/index.html |
 
 Teste rápido de que subiu:
 
@@ -70,6 +71,42 @@ para exercitar todo o fluxo. Para dados reais, públicos e já anonimizados:
 
 - **TCIA** — https://www.cancerimagingarchive.net (requer o NBIA Data Retriever)
 - **Imagens de exemplo do Orthanc** — https://orthanc.uclouvain.be/book/faq/sample-images.html
+
+## Visualizador sem Node: Stone Web Viewer
+
+O Stone é o visualizador radiológico oficial do Orthanc — scroll de série,
+janelamento, medidas, MPR — e roda como **plugin do próprio servidor**. Não
+precisa de Node, Yarn nem build: é um arquivo e uma seção de config (já
+presente em `orthanc.json`).
+
+1. Confira se `plugins/StoneWebViewer.dll` já veio no ZIP do Orthanc
+   (nas versões recentes para Windows ele vem junto):
+
+   ```cmd
+   dir pacs\plugins\StoneWebViewer.dll
+   ```
+
+   Se não vier, baixe o plugin em
+   https://orthanc.uclouvain.be/downloads/windows-64/stone-web-viewer/index.html
+   e coloque o `.dll` em `pacs/plugins/`.
+
+2. Reinicie o Orthanc e abra:
+   http://localhost:8042/stone-webviewer/index.html
+
+   No Orthanc Explorer também aparece um botão *Stone Web Viewer* na página
+   de cada estudo.
+
+Requisito: o plugin DICOMweb precisa estar ativo (é dele que o Stone lê as
+imagens). A chave `StoneWebViewer.DicomWebRoot` em `orthanc.json` aponta para
+`../dicom-web`, que é o padrão relativo à URL do plugin.
+
+Se a página abrir em branco ou der 404, quase sempre é uma destas: o `.dll`
+não está em `plugins/`, o DICOMweb está desligado, ou o Orthanc não foi
+reiniciado depois de mexer na config. O log na janela do Orthanc diz qual
+plugin carregou.
+
+O OHIF continua sendo uma opção (ver `viewer-ohif/README.md`), mas exige
+compilar com Node — o Stone entrega o mesmo uso clínico básico sem isso.
 
 ## Configuração
 
