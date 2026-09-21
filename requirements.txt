@@ -1,2 +1,13 @@
-pydicom
-matplotlib
+# Núcleo — necessário para tudo
+pydicom>=2.3
+numpy>=1.21
+
+# Miniaturas (metadata/thumbnails.py)
+pillow>=9.0
+
+# Visualizador legado (viewer_legacy/sico.py)
+matplotlib>=3.5
+
+# Opcionais — só para exportar em Parquet / usar DataFrame
+# pandas>=1.5
+# pyarrow>=10.0

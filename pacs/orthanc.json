@@ -1,0 +1,56 @@
+{
+  "// NOTA": "Config mínima do Orthanc portátil para uso local de estudo, com dados anonimizados. Caminhos relativos são resolvidos a partir da pasta onde o Orthanc.exe é executado. Veja pacs/README.md.",
+
+  "Name": "miniPACS-estudo",
+  "StorageDirectory": "./orthanc-db",
+  "IndexDirectory": "./orthanc-db",
+  "StorageCompression": false,
+
+  "HttpServerEnabled": true,
+  "HttpPort": 8042,
+  "HttpDescribeErrors": true,
+
+  "DicomServerEnabled": true,
+  "DicomAet": "MINIPACS",
+  "DicomPort": 4242,
+
+  "// Acesso": "Autenticação desligada e servidor restrito a localhost. Protótipo local: NÃO exponha esta porta na rede sem ligar RemoteAccessAllowed + AuthenticationEnabled + usuário/senha abaixo.",
+  "RemoteAccessAllowed": false,
+  "AuthenticationEnabled": false,
+  "RegisteredUsers": {},
+
+  "// CORS": "Necessário para o OHIF (servido em outra porta) conseguir falar com o DICOMweb daqui.",
+  "HttpHeaders": {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+    "Access-Control-Allow-Headers": "origin, x-requested-with, accept, content-type, authorization"
+  },
+
+  "Plugins": ["./plugins"],
+
+  "DicomWeb": {
+    "Enable": true,
+    "Root": "/dicom-web/",
+    "EnableWado": true,
+    "WadoRoot": "/wado",
+    "Ssl": false,
+    "StudiesMetadata": "Full",
+    "SeriesMetadata": "Full"
+  },
+
+  "// Worklist": "Ligue para simular fluxo de exame agendado (fins didáticos). Coloque os arquivos .wl na pasta apontada.",
+  "Worklists": {
+    "Enable": false,
+    "Database": "./worklists"
+  },
+
+  "OverwriteInstances": true,
+  "StableAge": 15,
+  "JobsHistorySize": 50,
+  "SaveJobs": true,
+  "ConcurrentJobs": 2,
+  "MaximumStorageSize": 0,
+  "MaximumPatientCount": 0,
+  "LimitFindResults": 0,
+  "DefaultEncoding": "Latin1"
+}

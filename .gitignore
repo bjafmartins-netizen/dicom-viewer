@@ -2,5 +2,31 @@ __pycache__/
 *.pyc
 .venv/
 venv/
-*.dcm
 .DS_Store
+
+# Arquivos DICOM nunca entram no repositório
+*.dcm
+data/*
+!data/README.md
+
+# Orthanc: binário portátil, plugins e banco local
+pacs/Orthanc
+pacs/Orthanc.exe
+pacs/*.dll
+pacs/plugins/
+pacs/orthanc-db/
+pacs/worklists/
+
+# Build do OHIF (dezenas de MB, gerado com yarn build)
+viewer-ohif/dist/
+
+# Saídas de trabalho na raiz (CSV/JSON de metadados, miniaturas)
+/*.csv
+/*.json
+/thumbs/
+/metadata.parquet
+
+# Sal da anonimização — NUNCA versionar (com ele, os pseudônimos ficam
+# reversíveis por força bruta contra uma lista de pacientes)
+.salt
+*.salt
