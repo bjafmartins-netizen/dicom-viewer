@@ -49,11 +49,16 @@ Com o Orthanc instalado em `pacs/` (ver `pacs/README.md`):
 python scripts/import_folder.py --input data/phantom
 ```
 
-Orthanc Explorer em http://localhost:8042. Para o visualizador radiológico,
-há dois caminhos: o **Stone Web Viewer** (plugin do próprio Orthanc, sem Node
-nem build — http://localhost:8042/stone-webviewer/index.html) ou o **OHIF**
-(http://localhost:3000, exige compilar com Node). Ver `pacs/README.md` e
-`viewer-ohif/README.md`.
+Os visualizadores vêm compilados no próprio Orthanc, como plugins — sem Node,
+sem `yarn build`:
+
+| | URL |
+|---|---|
+| Orthanc Explorer | http://localhost:8042 |
+| Stone Web Viewer | http://localhost:8042/stone-webviewer/index.html |
+| OHIF Viewer | http://localhost:8042/ohif/ |
+
+Detalhes e solução de problemas em `pacs/README.md`.
 
 ## O que cada parte faz
 
@@ -151,8 +156,8 @@ servidor HTTP de mentira) nem de arquivos DICOM externos (gerados na hora).
 - [x] Gerador de dataset sintético + testes
 - [x] `orthanc.json` e `ohif-config.js` prontos
 - [ ] Orthanc portátil baixado e rodando (passo manual — `pacs/README.md`)
-- [x] Stone Web Viewer configurado (`orthanc.json`) — visualizador sem Node
-- [ ] Build do OHIF gerado (passo manual, opcional — `viewer-ohif/README.md`)
+- [x] Stone Web Viewer e OHIF configurados via plugin (`orthanc.json`), sem Node
+- [ ] Build próprio do OHIF (opcional, só para customizar — `viewer-ohif/README.md`)
 - [ ] Worklist simulado (config já preparada, desligada por padrão)
 
 Plano completo e decisões de arquitetura: [`docs/ARQUITETURA.md`](docs/ARQUITETURA.md).

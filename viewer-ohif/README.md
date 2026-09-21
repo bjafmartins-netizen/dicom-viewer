@@ -8,10 +8,14 @@ necessário na hora de compilar, não para usar.
 O build **não está versionado** aqui (são dezenas de MB). Versionado é só o
 `ohif-config.js`, que aponta o viewer para o Orthanc local.
 
-> **Sem Node/Yarn na máquina?** Não precisa compilar nada: use o **Stone Web
-> Viewer**, plugin do próprio Orthanc, que entrega scroll de série,
-> janelamento, medidas e MPR. Instruções em `pacs/README.md`. O OHIF abaixo
-> continua valendo para quem quiser a interface dele ou suas extensões.
+> **Na maioria dos casos você não precisa desta pasta.** O instalador do
+> Orthanc já inclui o OHIF compilado como plugin
+> (`libOrthancOHIF-Windows64.dll`), servido em http://localhost:8042/ohif/ —
+> sem Node, sem build. Veja `pacs/README.md`.
+>
+> Compile do zero apenas se quiser **modificar** o OHIF, fixar uma versão
+> específica ou usar extensões que não vêm no plugin. Foi para esse caso que o
+> `ohif-config.js` daqui existe.
 
 ## Compilar (uma vez, numa máquina com Node 18+ e Yarn)
 

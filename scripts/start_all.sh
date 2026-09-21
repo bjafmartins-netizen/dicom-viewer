@@ -58,16 +58,14 @@ if [ -d "$OHIF_DIST" ]; then
   python3 -m http.server "$OHIF_PORT" --directory "$OHIF_DIST" >/dev/null 2>&1 &
   PIDS+=($!)
   echo "OHIF no ar:    http://localhost:$OHIF_PORT"
-elif ls "$PACS_DIR"/plugins/*StoneWebViewer* >/dev/null 2>&1; then
-  echo "Build do OHIF não encontrado; use o Stone Web Viewer (plugin do Orthanc):"
-  echo "               http://localhost:$ORTHANC_PORT/stone-webviewer/index.html"
 else
-  echo "AVISO: nenhum viewer instalado (nem OHIF em viewer-ohif/dist, nem plugin Stone)."
-  echo "       Veja pacs/README.md. A interface própria do Orthanc já mostra as imagens."
+  echo "Sem build próprio do OHIF — usando os viewers embutidos nos plugins."
 fi
 
 echo ""
 echo "Orthanc Explorer: http://localhost:$ORTHANC_PORT"
+echo "Stone Web Viewer: http://localhost:$ORTHANC_PORT/stone-webviewer/index.html"
+echo "OHIF (plugin):    http://localhost:$ORTHANC_PORT/ohif/"
 echo "Importar exames:  python scripts/import_folder.py --input data/phantom"
 echo "Ctrl+C encerra."
 wait

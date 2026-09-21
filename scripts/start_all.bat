@@ -27,18 +27,15 @@ if exist "%OHIF_DIST%\index.html" (
   start "OHIF Viewer" cmd /k "python -m http.server %OHIF_PORT% --directory ""%OHIF_DIST%"""
   timeout /t 2 /nobreak >nul
   start "" "http://localhost:%OHIF_PORT%"
-) else if exist "%PACS_DIR%\plugins\StoneWebViewer.dll" (
-  echo Build do OHIF nao encontrado; abrindo o Stone Web Viewer ^(plugin do Orthanc^).
-  start "" "http://localhost:%ORTHANC_PORT%/stone-webviewer/index.html"
 ) else (
-  echo AVISO: nenhum viewer instalado ^(nem OHIF em viewer-ohif\dist, nem plugin Stone^).
-  echo        Veja pacs\README.md. Abrindo a interface propria do Orthanc.
-  start "" "http://localhost:%ORTHANC_PORT%"
+  echo Usando os viewers embutidos no Orthanc ^(plugins^), sem build proprio.
+  start "" "http://localhost:%ORTHANC_PORT%/stone-webviewer/index.html"
 )
 
 echo.
 echo Orthanc Explorer: http://localhost:%ORTHANC_PORT%
 echo Stone Web Viewer: http://localhost:%ORTHANC_PORT%/stone-webviewer/index.html
+echo OHIF ^(plugin^):    http://localhost:%ORTHANC_PORT%/ohif/
 echo Importar exames:  python scripts\import_folder.py --input data\phantom
 echo.
 echo Feche as janelas abertas para encerrar os servicos.

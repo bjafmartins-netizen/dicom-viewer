@@ -43,7 +43,8 @@ Endereços:
 | API REST | http://localhost:8042/system |
 | DICOMweb (é o que o OHIF consome) | http://localhost:8042/dicom-web |
 | Porta DICOM (C-STORE, AET `MINIPACS`) | 4242 |
-| Stone Web Viewer (se o plugin estiver em `plugins/`) | http://localhost:8042/stone-webviewer/index.html |
+| Stone Web Viewer | http://localhost:8042/stone-webviewer/index.html |
+| OHIF Viewer (plugin) | http://localhost:8042/ohif/ |
 
 Teste rápido de que subiu:
 
@@ -72,41 +73,60 @@ para exercitar todo o fluxo. Para dados reais, públicos e já anonimizados:
 - **TCIA** — https://www.cancerimagingarchive.net (requer o NBIA Data Retriever)
 - **Imagens de exemplo do Orthanc** — https://orthanc.uclouvain.be/book/faq/sample-images.html
 
-## Visualizador sem Node: Stone Web Viewer
+## Visualizadores: Stone e OHIF, sem compilar nada
 
-O Stone é o visualizador radiológico oficial do Orthanc — scroll de série,
-janelamento, medidas, MPR — e roda como **plugin do próprio servidor**. Não
-precisa de Node, Yarn nem build: é um arquivo e uma seção de config (já
-presente em `orthanc.json`).
+O instalador do Orthanc para Windows **já traz os dois visualizadores
+compilados** em `pacs/plugins/`:
 
-1. Confira se `plugins/StoneWebViewer.dll` já veio no ZIP do Orthanc
-   (nas versões recentes para Windows ele vem junto):
+| Plugin (Windows 64 bits) | Viewer | URL |
+|---|---|---|
+| `libStoneWebViewer-Windows64.dll` | Stone Web Viewer | http://localhost:8042/stone-webviewer/index.html |
+| `libOrthancOHIF-Windows64.dll` | OHIF Viewer | http://localhost:8042/ohif/ |
+| `OrthancDicomWeb.dll` | (fonte de dados dos dois) | http://localhost:8042/dicom-web |
 
-   ```cmd
-   dir pacs\plugins\StoneWebViewer.dll
-   ```
+Ou seja: **não é preciso Node nem `yarn build`** para ter o OHIF. Compilar do
+zero (ver `viewer-ohif/README.md`) só faz sentido se você quiser modificar o
+OHIF ou usar extensões que não vêm no plugin.
 
-   Se não vier, baixe o plugin em
-   https://orthanc.uclouvain.be/downloads/windows-64/stone-web-viewer/index.html
-   e coloque o `.dll` em `pacs/plugins/`.
+No Linux os mesmos plugins se chamam `libStoneWebViewer.so`,
+`libOrthancOHIF.so` e `libOrthancDicomWeb.so`.
 
-2. Reinicie o Orthanc e abra:
-   http://localhost:8042/stone-webviewer/index.html
+### A chave `Plugins` é uma lista explícita
 
-   No Orthanc Explorer também aparece um botão *Stone Web Viewer* na página
-   de cada estudo.
+O instalador coloca uns 30 plugins na pasta (MySQL, PostgreSQL, AWS, Azure,
+WSI...). Carregar todos só gera ruído no log, então `orthanc.json` lista
+apenas os três acima. Para ver o que existe na sua instalação:
 
-Requisito: o plugin DICOMweb precisa estar ativo (é dele que o Stone lê as
-imagens). A chave `StoneWebViewer.DicomWebRoot` em `orthanc.json` aponta para
-`../dicom-web`, que é o padrão relativo à URL do plugin.
+```cmd
+dir pacs\plugins
+```
 
-Se a página abrir em branco ou der 404, quase sempre é uma destas: o `.dll`
-não está em `plugins/`, o DICOMweb está desligado, ou o Orthanc não foi
-reiniciado depois de mexer na config. O log na janela do Orthanc diz qual
-plugin carregou.
+Se algum nome for diferente do que está no `orthanc.json` (muda entre
+versões), ajuste a lista — ou troque tudo por `"Plugins": ["./plugins"]` para
+carregar a pasta inteira.
 
-O OHIF continua sendo uma opção (ver `viewer-ohif/README.md`), mas exige
-compilar com Node — o Stone entrega o mesmo uso clínico básico sem isso.
+Confira no log da janela do Orthanc, na inicialização, as linhas que começam
+com `Registering plugin`: os três devem aparecer.
+
+### Instalador x ZIP portátil
+
+Se você usou o **instalador** (`.exe`, com `unins000.exe` na pasta), ele traz
+um `orthanc.json` próprio em `pacs/Configuration/`. Isso não atrapalha: o
+`start_all` chama `Orthanc.exe orthanc.json`, passando explicitamente o nosso
+arquivo, e o Orthanc ignora os demais.
+
+O que **não** funciona é ter o Orthanc instalado como serviço do Windows
+rodando ao mesmo tempo: ele ocupa a porta 8042 e você vai ver uma config que
+não é a nossa. Se acontecer, pare o serviço em `services.msc` (nome
+*Orthanc*) antes de rodar o `start_all`.
+
+### Se o viewer não abrir
+
+1. O plugin apareceu no log? Sem a linha `Registering plugin`, o nome do
+   arquivo na chave `Plugins` está errado.
+2. O DICOMweb responde? `curl http://localhost:8042/dicom-web/studies` —
+   os dois viewers leem as imagens por ele.
+3. Reiniciou o Orthanc depois de mexer na config? Ele só lê na inicialização.
 
 ## Configuração
 

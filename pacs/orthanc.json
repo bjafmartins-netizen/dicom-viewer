@@ -26,7 +26,12 @@
     "Access-Control-Allow-Headers": "origin, x-requested-with, accept, content-type, authorization"
   },
 
-  "Plugins": ["./plugins"],
+  "// Plugins": "Lista explicita para nao carregar os ~30 plugins que vem no instalador (MySQL, PostgreSQL, AWS, Azure...), que nao usamos. Os nomes abaixo sao os do instalador Windows 64 bits; no Linux sao libOrthancDicomWeb.so, libStoneWebViewer.so e libOrthancOHIF.so. Se preferir carregar tudo, troque a lista inteira por [\"./plugins\"].",
+  "Plugins": [
+    "./plugins/OrthancDicomWeb.dll",
+    "./plugins/libStoneWebViewer-Windows64.dll",
+    "./plugins/libOrthancOHIF-Windows64.dll"
+  ],
 
   "DicomWeb": {
     "Enable": true,
@@ -41,6 +46,11 @@
   "// StoneWebViewer": "Visualizador radiologico servido pelo proprio Orthanc (plugin StoneWebViewer.dll em ./plugins). Abre em /stone-webviewer/index.html. Depende do plugin DICOMweb estar ativo acima. Nao precisa de Node nem de build.",
   "StoneWebViewer": {
     "DicomWebRoot": "../dicom-web"
+  },
+
+  "// OHIF": "Plugin que serve o OHIF Viewer ja compilado, embutido no instalador do Orthanc. Abre em /ohif/. Dispensa Node e yarn build. Usa o DICOMweb como fonte de dados.",
+  "OHIF": {
+    "DataSource": "dicom-web"
   },
 
   "// Worklist": "Ligue para simular fluxo de exame agendado (fins didáticos). Coloque os arquivos .wl na pasta apontada.",
