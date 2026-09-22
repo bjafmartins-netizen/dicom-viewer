@@ -8,6 +8,9 @@ instalar nada como administrador — inclusive de um pendrive.
 reais de paciente. Ver `docs/ARQUITETURA.md` para o desenho completo e os
 pontos de extensão caso isso mude.
 
+**Guia de comandos (Windows):** [`docs/COMANDOS.md`](docs/COMANDOS.md) — todos
+os comandos de linha, com as opções, prontos para copiar.
+
 ## Estrutura
 
 ```
@@ -155,7 +158,7 @@ editado nada. O `core.filemode false` vale só para este repositório.
 python -m unittest discover -s tests -v
 ```
 
-22 testes, sem dependência de Orthanc rodando (o cliente é testado contra um
+25 testes, sem dependência de Orthanc rodando (o cliente é testado contra um
 servidor HTTP de mentira) nem de arquivos DICOM externos (gerados na hora).
 
 ## Status
