@@ -1,0 +1,27 @@
+# Normaliza fim de linha para não gerar "modificações fantasma" entre
+# Windows e Linux (o caso clássico: git pull recusando por causa de um .sh
+# que ninguém editou).
+
+# Por padrão, o git decide o que é texto e normaliza para LF no repositório.
+* text=auto
+
+# Shell scripts PRECISAM de LF, inclusive quando editados no Windows:
+# com CRLF o bash falha com "bad interpreter: No such file or directory".
+*.sh text eol=lf
+
+# Scripts do Windows precisam de CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Código e config: LF no repositório, convertido na checagem se preciso.
+*.py text
+*.js text
+*.json text
+*.md text
+
+# Binários — nunca normalizar.
+*.dcm binary
+*.png binary
+*.dll binary
+*.exe binary
+*.parquet binary

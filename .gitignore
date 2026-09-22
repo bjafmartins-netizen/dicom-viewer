@@ -2,5 +2,31 @@ __pycache__/
 *.pyc
 .venv/
 venv/
-*.dcm
 .DS_Store
+
+# Arquivos DICOM nunca entram no repositório
+*.dcm
+data/*
+!data/README.md
+
+# Orthanc: a instalação inteira fica fora do repositório. O ZIP do Orthanc
+# traz muita coisa (Configuration/, Logs/, OrthancService.exe, DLLs...), e a
+# lista varia por versão — então ignoramos TUDO dentro de pacs/ e liberamos
+# só os dois arquivos que são nossos.
+pacs/*
+!pacs/orthanc.json
+!pacs/README.md
+
+# Build do OHIF (dezenas de MB, gerado com yarn build)
+viewer-ohif/dist/
+
+# Saídas de trabalho na raiz (CSV/JSON de metadados, miniaturas)
+/*.csv
+/*.json
+/thumbs/
+/metadata.parquet
+
+# Sal da anonimização — NUNCA versionar (com ele, os pseudônimos ficam
+# reversíveis por força bruta contra uma lista de pacientes)
+.salt
+*.salt

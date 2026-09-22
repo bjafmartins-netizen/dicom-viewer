@@ -1,0 +1,71 @@
+{
+  "// NOTA": "Config mínima do Orthanc portátil para uso local de estudo, com dados anonimizados. Caminhos relativos são resolvidos a partir da pasta onde o Orthanc.exe é executado. Veja pacs/README.md.",
+
+  "Name": "miniPACS-estudo",
+  "StorageDirectory": "./orthanc-db",
+  "IndexDirectory": "./orthanc-db",
+  "StorageCompression": false,
+
+  "HttpServerEnabled": true,
+  "HttpPort": 8042,
+  "HttpDescribeErrors": true,
+
+  "DicomServerEnabled": true,
+  "DicomAet": "MINIPACS",
+  "DicomPort": 4242,
+
+  "// Acesso": "Autenticação desligada e servidor restrito a localhost. Protótipo local: NÃO exponha esta porta na rede sem ligar RemoteAccessAllowed + AuthenticationEnabled + usuário/senha abaixo.",
+  "RemoteAccessAllowed": false,
+  "AuthenticationEnabled": false,
+  "RegisteredUsers": {},
+
+  "// CORS": "Necessário para o OHIF (servido em outra porta) conseguir falar com o DICOMweb daqui.",
+  "HttpHeaders": {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+    "Access-Control-Allow-Headers": "origin, x-requested-with, accept, content-type, authorization"
+  },
+
+  "// Plugins": "Lista explicita para nao carregar os ~30 plugins que vem no instalador (MySQL, PostgreSQL, AWS, Azure...), que nao usamos. Os nomes abaixo sao os do instalador Windows 64 bits; no Linux sao libOrthancDicomWeb.so, libStoneWebViewer.so e libOrthancOHIF.so. Se preferir carregar tudo, troque a lista inteira por [\"./plugins\"].",
+  "Plugins": [
+    "./plugins/OrthancDicomWeb.dll",
+    "./plugins/libStoneWebViewer-Windows64.dll",
+    "./plugins/libOrthancOHIF-Windows64.dll"
+  ],
+
+  "DicomWeb": {
+    "Enable": true,
+    "Root": "/dicom-web/",
+    "EnableWado": true,
+    "WadoRoot": "/wado",
+    "Ssl": false,
+    "StudiesMetadata": "Full",
+    "SeriesMetadata": "Full"
+  },
+
+  "// StoneWebViewer": "Visualizador radiologico servido pelo proprio Orthanc (plugin StoneWebViewer.dll em ./plugins). Abre em /stone-webviewer/index.html. Depende do plugin DICOMweb estar ativo acima. Nao precisa de Node nem de build.",
+  "StoneWebViewer": {
+    "DicomWebRoot": "../dicom-web"
+  },
+
+  "// OHIF": "Plugin que serve o OHIF Viewer ja compilado, embutido no instalador do Orthanc. Abre em /ohif/. Dispensa Node e yarn build. Usa o DICOMweb como fonte de dados.",
+  "OHIF": {
+    "DataSource": "dicom-web"
+  },
+
+  "// Worklist": "Ligue para simular fluxo de exame agendado (fins didáticos). Coloque os arquivos .wl na pasta apontada.",
+  "Worklists": {
+    "Enable": false,
+    "Database": "./worklists"
+  },
+
+  "OverwriteInstances": true,
+  "StableAge": 15,
+  "JobsHistorySize": 50,
+  "SaveJobs": true,
+  "ConcurrentJobs": 2,
+  "MaximumStorageSize": 0,
+  "MaximumPatientCount": 0,
+  "LimitFindResults": 0,
+  "DefaultEncoding": "Latin1"
+}
