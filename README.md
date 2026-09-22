@@ -137,6 +137,18 @@ python viewer_legacy/sico.py
 Abre um arquivo por vez numa janela Tkinter. Mantido para checagem rápida sem
 subir o servidor.
 
+## No Windows: um ajuste depois de clonar
+
+```cmd
+git config core.filemode false
+```
+
+Os scripts `.sh` são marcados como executáveis no repositório, e o NTFS não
+guarda esse bit. Sem o ajuste acima, o git os reporta como modificados logo
+depois de um `git reset --hard`, e o `git pull` seguinte aborta com
+*"Your local changes would be overwritten by merge"* — mesmo sem ninguém ter
+editado nada. O `core.filemode false` vale só para este repositório.
+
 ## Testes
 
 ```bash

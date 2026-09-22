@@ -120,6 +120,39 @@ rodando ao mesmo tempo: ele ocupa a porta 8042 e você vai ver uma config que
 não é a nossa. Se acontecer, pare o serviço em `services.msc` (nome
 *Orthanc*) antes de rodar o `start_all`.
 
+### Se o Orthanc morrer na inicialização
+
+```
+Uncaught exception, stopping now: The TCP port of the DICOM server is
+privileged or already in use (port = 4242)
+```
+
+Alguém já está com a porta. Em geral é o Orthanc instalado como **serviço do
+Windows**, que sobe junto com a máquina:
+
+```cmd
+sc query Orthanc
+netstat -ano | findstr ":4242"
+```
+
+Se o serviço estiver `RUNNING`, pare-o (terminal como administrador):
+
+```cmd
+sc stop Orthanc
+sc config Orthanc start= disabled
+```
+
+Se o `netstat` apontar um `Orthanc.exe` órfão de uma tentativa anterior, mate
+pelo PID: `taskkill /PID <numero> /F`.
+
+Para ver o log inteiro em vez da janela separada que o `start_all` abre, rode
+o servidor direto e capture a saída:
+
+```cmd
+cd pacs
+Orthanc.exe orthanc.json > orthanc.log 2>&1
+```
+
 ### Se o viewer não abrir
 
 1. O plugin apareceu no log? Sem a linha `Registering plugin`, o nome do
