@@ -22,7 +22,7 @@ RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, RAIZ)
 sys.path.insert(0, os.path.join(RAIZ, "scripts"))
 
-from metadata.orthanc_client import OrthancClient, OrthancError  # noqa: E402
+from metadata.orthanc_client import OrthancClient, OrthancError, _clean  # noqa: E402
 
 import make_phantom_dataset  # noqa: E402
 
@@ -147,6 +147,29 @@ class TestOrthancClient(unittest.TestCase):
         with self.assertRaises(OrthancError) as contexto:
             offline.system()
         self.assertIn("Orthanc está rodando", str(contexto.exception))
+
+
+class TestNormalizacao(unittest.TestCase):
+    """Valores da API precisam sair iguais aos lidos direto do arquivo."""
+
+    def test_localhost_vira_ipv4(self):
+        self.assertEqual(
+            OrthancClient("http://localhost:8042/").base_url, "http://127.0.0.1:8042"
+        )
+        self.assertEqual(
+            OrthancClient("http://orthanc:8042").base_url, "http://orthanc:8042"
+        )
+
+    def test_valores_multiplos_viram_lista(self):
+        self.assertEqual(_clean("0.5\\0.5"), ["0.5", "0.5"])
+        self.assertEqual(_clean("ORIGINAL\\PRIMARY"), ["ORIGINAL", "PRIMARY"])
+
+    def test_float_longo_do_orthanc_encurta(self):
+        self.assertEqual(_clean("0.90000000000000002"), "0.9")
+        self.assertEqual(_clean("38.399999999999999"), "38.4")
+        # UID e decimal curto ficam como estão
+        self.assertEqual(_clean("1.2.840.10008.1.2.1"), "1.2.840.10008.1.2.1")
+        self.assertEqual(_clean("4500.0"), "4500.0")
 
 
 if __name__ == "__main__":

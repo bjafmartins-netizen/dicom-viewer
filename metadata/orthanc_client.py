@@ -15,8 +15,10 @@ from __future__ import annotations
 
 import base64
 import json
+import re
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
 import uuid
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
@@ -46,7 +48,7 @@ class OrthancClient:
         password: Optional[str] = None,
         timeout: float = 60.0,
     ) -> None:
-        self.base_url = base_url.rstrip("/")
+        self.base_url = _prefer_ipv4(base_url.rstrip("/"))
         self.timeout = timeout
         self._auth: Optional[str] = None
         if username is not None:
@@ -203,11 +205,47 @@ class OrthancClient:
         return sent, failed
 
 
+def _prefer_ipv4(url: str) -> str:
+    """Troca ``localhost`` por ``127.0.0.1``.
+
+    No Windows, ``localhost`` resolve primeiro para ``::1``; o Orthanc só escuta
+    em IPv4, e cada requisição perde ~2 s até o fallback — 369 instâncias
+    viravam 13 minutos de extração.
+    """
+    parts = urllib.parse.urlsplit(url)
+    if (parts.hostname or "").lower() != "localhost":
+        return url
+    netloc = "127.0.0.1" + (f":{parts.port}" if parts.port else "")
+    if "@" in parts.netloc:
+        netloc = parts.netloc.rsplit("@", 1)[0] + "@" + netloc
+    return urllib.parse.urlunsplit(parts._replace(netloc=netloc))
+
+
+# Decimal com dígitos demais: é como o Orthanc imprime tags FD/FL
+# (0.90000000000000002 em vez de 0.9).
+_FLOAT_LONGO = re.compile(r"[+-]?\d*\.\d{15,}(?:[eE][+-]?\d+)?")
+
+
 def _clean(value: Any) -> Any:
-    """Normaliza o que a API devolve (string vazia vira None)."""
+    """Normaliza o que a API devolve para ficar igual a `scan_folder`.
+
+    String vazia vira None; valores múltiplos (``0.5\\0.5``) viram lista, como
+    o MultiValue do pydicom; FD/FL voltam à representação curta do float.
+    """
     if value is None:
         return None
     if isinstance(value, (dict, list)):
         return None  # sequências DICOM não viram coluna de tabela
     text = str(value).strip()
+    if not text:
+        return None
+    if "\\" in text:
+        return [_clean_token(v) for v in text.split("\\")]
+    return _clean_token(text)
+
+
+def _clean_token(text: str) -> Optional[str]:
+    text = text.strip()
+    if _FLOAT_LONGO.fullmatch(text):
+        return repr(float(text))
     return text or None
