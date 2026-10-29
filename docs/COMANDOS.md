@@ -3,6 +3,32 @@
 Referência rápida de todos os comandos do projeto, no formato do Windows
 (`cmd`). Para o que cada parte faz e por quê, ver o [`README.md`](../README.md).
 
+## Sem terminal: o painel
+
+Quase tudo deste guia também está em botões. Dois cliques em `painel.bat`, na
+raiz do projeto, ou:
+
+```cmd
+python scripts\painel.py
+```
+
+A janela traz o estado do servidor (atualizado a cada 3 s), os atalhos dos
+visualizadores, e botões para importar, exportar metadados, gerar miniaturas,
+conferir o protocolo de EM e rodar os testes. O comando que cada botão dispara
+aparece no log, começando com `$` — serve também para aprender a linha de
+comando equivalente.
+
+Se o `painel.bat` não encontrar o Python, aponte um:
+
+```cmd
+set MINIPACS_PYTHON=E:\winPY\python\pythonw.exe
+```
+
+O resto deste guia é a versão em linha de comando, que continua valendo para
+automação e para o que o painel não cobre (opções menos usadas).
+
+---
+
 ## Antes de tudo: abrir o terminal certo
 
 1. Abra o **WinPython Command Prompt** (`E:\winPY\WinPython Command Prompt.exe`).

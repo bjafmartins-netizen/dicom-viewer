@@ -18,7 +18,7 @@ pacs/           Orthanc portátil — o servidor (DICOM + DICOMweb + storage)
 metadata/       extração de metadados, anonimização, miniaturas, cliente REST
 viewer-ohif/    configuração do OHIF Viewer apontando para o Orthanc local
 viewer_legacy/  sico.py — visualizador de arquivo único (Tkinter)
-scripts/        automação: subir tudo, importar pasta, dataset de teste, protocolo EM
+scripts/        painel gráfico, automação: subir tudo, importar, dataset, protocolo EM
 tests/          testes (não precisam de Orthanc nem de arquivo DICOM externo)
 data/           área de trabalho para os exames (não versionada)
 ```
@@ -31,6 +31,18 @@ pip install -r requirements.txt
 
 O binário do Orthanc e o build do OHIF não estão no repositório — ver
 `pacs/README.md` e `viewer-ohif/README.md`.
+
+## Sem linha de comando: o painel
+
+Dois cliques em `painel.bat` (ou `python scripts/painel.py`) abrem uma janela
+com o fluxo inteiro: subir e parar o servidor, importar pasta anonimizando,
+exportar metadados por série ou por imagem, miniaturas, conferir o protocolo de
+EM e rodar os testes. Cada botão monta o mesmo comando documentado em
+[`docs/COMANDOS.md`](docs/COMANDOS.md) e mostra a saída no log da própria
+janela — nada é reimplementado ali.
+
+Usa só Tkinter, que já vem no Python. Se o painel não achar o interpretador,
+aponte um: `set MINIPACS_PYTHON=E:\winPY\python\pythonw.exe`.
 
 ## Começando em 3 comandos
 
@@ -187,7 +199,7 @@ editado nada. O `core.filemode false` vale só para este repositório.
 python -m unittest discover -s tests -v
 ```
 
-43 testes, sem dependência de Orthanc rodando (o cliente é testado contra um
+51 testes, sem dependência de Orthanc rodando (o cliente é testado contra um
 servidor HTTP de mentira) nem de arquivos DICOM externos (gerados na hora).
 
 ## Status
@@ -196,6 +208,7 @@ servidor HTTP de mentira) nem de arquivos DICOM externos (gerados na hora).
 - [x] Anonimização com hash + sal e remapeamento determinístico de UIDs
 - [x] Cliente REST/DICOMweb do Orthanc (`upload`, STOW-RS, leitura de tags)
 - [x] Scripts de automação (`start_all`, `import_folder`)
+- [x] Painel gráfico (`painel.bat`) com o fluxo inteiro em botões
 - [x] Miniaturas por série
 - [x] Gerador de dataset sintético + testes
 - [x] `orthanc.json` e `ohif-config.js` prontos
