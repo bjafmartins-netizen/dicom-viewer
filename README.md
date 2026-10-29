@@ -73,8 +73,9 @@ contém e a varredura entra nas subpastas sozinha.
 
 Além do conjunto comum (paciente, estudo, série, equipamento, geometria), traz
 as tags de aquisição específicas da modalidade: TR/TE/FA/banda/matriz/SAR em RM,
-kVp/mAs/pitch/kernel/CTDIvol em TC, índice de exposição e DAP em RX/DX/RF/XA,
-força de compressão em MG etc. Acrescenta ainda o que o DICOM não guarda pronto:
+kVp/mAs/pitch/kernel/CTDIvol em TC, índice de exposição e DAP em RX/DX, tempo
+de fluoroscopia e número de disparos em RF/XA, força de compressão em MG etc.
+Tags privadas de fabricante saem pelo número: `--tag 0021,1004`. Acrescenta ainda o que o DICOM não guarda pronto:
 plano do corte (`ImagePlane`), resolução no plano e matriz.
 
 ```bash
@@ -186,7 +187,7 @@ editado nada. O `core.filemode false` vale só para este repositório.
 python -m unittest discover -s tests -v
 ```
 
-37 testes, sem dependência de Orthanc rodando (o cliente é testado contra um
+43 testes, sem dependência de Orthanc rodando (o cliente é testado contra um
 servidor HTTP de mentira) nem de arquivos DICOM externos (gerados na hora).
 
 ## Status

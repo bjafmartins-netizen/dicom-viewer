@@ -213,6 +213,22 @@ DICOM — uma `--tag` para cada:
 python -m metadata.extract_metadata --input data\phantom --output m.csv --tag BodyPartExamined --tag ContrastBolusAgent
 ```
 
+### Tags privadas de fabricante (Siemens, GE, Philips)
+
+Tag sem nome no padrão DICOM se pede pelo número, no formato `grupo,elemento`:
+
+```cmd
+python -m metadata.extract_metadata --input D:\exames --output m.csv --tag 0021,1004
+```
+
+Aceita `0021,1004`, `(0021,1004)` ou `0x0021,0x1004`. A coluna sai com o nome
+que você escreveu. Para descobrir quais tags privadas o seu equipamento grava,
+abra um exame dele no Orthanc Explorer e veja a lista de tags da instância —
+as privadas aparecem como "Unknown Tag & Data", com o `PrivateCreator` do
+fabricante ao lado.
+
+Funciona tanto por arquivo quanto por `--orthanc`.
+
 ### Outros formatos
 
 ```cmd

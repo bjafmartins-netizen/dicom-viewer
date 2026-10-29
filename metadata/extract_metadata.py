@@ -21,6 +21,7 @@ import argparse
 import csv
 import json
 import os
+import re
 import sys
 from typing import Any, Dict, Iterable, Iterator, List, Optional, Sequence
 
@@ -182,7 +183,10 @@ MODALITY_TAGS: Dict[str, Sequence[str]] = {
         "TransducerType",
         "TransducerFrequency",
         "MechanicalIndex",
-        "ThermalIndex",
+        # O padrão não tem um "ThermalIndex" genérico: são três, por tecido.
+        "SoftTissueThermalIndex",
+        "BoneThermalIndex",
+        "CranialThermalIndex",
         "DepthOfScanField",
         "UltrasoundColorDataPresent",
         "NumberOfStages",
@@ -225,8 +229,30 @@ _XRAY_TAGS: Sequence[str] = (
     "FocalSpots",
     "BodyPartThickness",
 )
-for _mod in ("CR", "DX", "RF", "XA"):
+#: Fluoroscopia e angiografia: tudo do RX mais tempo de fluoro, número de
+#: disparos, modo de radiação e ângulos do arco. Dose de fluoroscopia É padrão
+#: DICOM — fica em TotalTimeOfFluoroscopy (0040,0300), não em tag privada.
+_FLUORO_TAGS: Sequence[str] = tuple(_XRAY_TAGS) + (
+    "TotalTimeOfFluoroscopy",
+    "TotalNumberOfExposures",
+    "FluoroscopyFlag",
+    "RadiationSetting",
+    "RadiationMode",
+    "ExposureTimeInms",
+    "XRayTubeCurrentInmA",
+    "ExposureInmAs",
+    "EntranceDose",
+    "AcquisitionDeviceProcessingDescription",
+    "PositionerPrimaryAngle",
+    "PositionerSecondaryAngle",
+    "FrameTime",
+    "RecommendedDisplayFrameRate",
+)
+
+for _mod in ("CR", "DX"):
     MODALITY_TAGS[_mod] = _XRAY_TAGS
+for _mod in ("RF", "XA"):
+    MODALITY_TAGS[_mod] = _FLUORO_TAGS
 
 
 # ---------------------------------------------------------------------------
@@ -263,8 +289,40 @@ def _to_native(value: Any) -> Any:
     return text or None
 
 
+#: "0021,1004", "(0021,1004)" ou "0x00211004" — como se escreve uma tag que
+#: não tem keyword (privada de fabricante).
+_TAG_NUMERICA = re.compile(
+    r"^\(?\s*(?:0x)?([0-9A-Fa-f]{4})\s*[,:]?\s*(?:0x)?([0-9A-Fa-f]{4})\s*\)?$"
+)
+
+
+def parse_tag(texto: str) -> Optional[int]:
+    """Converte ``"0021,1004"`` no número da tag; None se não for um número.
+
+    Serve para as tags privadas dos fabricantes, que não têm keyword no
+    dicionário DICOM e por isso não podem ser pedidas pelo nome.
+    """
+    match = _TAG_NUMERICA.match(str(texto))
+    if not match:
+        return None
+    return (int(match.group(1), 16) << 16) | int(match.group(2), 16)
+
+
 def _get(ds: "Dataset", keyword: str) -> Any:
-    """Lê uma tag pelo keyword, devolvendo None se ausente ou vazia."""
+    """Lê uma tag pelo keyword (ou por número, ex. ``0021,1004``)."""
+    numero = parse_tag(keyword)
+    if numero is not None:
+        try:
+            element = ds[numero]
+        except KeyError:
+            return None
+        except Exception:
+            return None
+        try:
+            return _to_native(element.value)
+        except Exception:
+            return None
+
     if keyword not in ds:
         return None
     try:

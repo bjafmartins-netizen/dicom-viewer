@@ -26,11 +26,14 @@ from metadata.anonymize import (  # noqa: E402
     pseudo_id,
 )
 from metadata.extract_metadata import (  # noqa: E402
+    MODALITY_TAGS,
     extract_metadata,
     group_by_series,
     image_plane,
     iter_dicom_files,
+    parse_tag,
     scan_folder,
+    tags_for_modality,
     write_records,
 )
 from metadata.thumbnails import thumbnails_for_folder  # noqa: E402
@@ -186,6 +189,57 @@ class TestNivelSerie(PhantomBase):
         linha = group_by_series(registros)[0]
         self.assertEqual(linha["ConvolutionKernel"], "B30f | B70f")
         self.assertEqual(linha["InstanceCount"], 2)
+
+
+class TestTagsPorNumero(PhantomBase):
+    """Tags sem keyword (privadas de fabricante) pedidas por número."""
+
+    def test_formatos_aceitos(self):
+        self.assertEqual(parse_tag("0021,1004"), 0x00211004)
+        self.assertEqual(parse_tag("(0021,1004)"), 0x00211004)
+        self.assertEqual(parse_tag("0x0021,0x1004"), 0x00211004)
+        self.assertIsNone(parse_tag("PatientID"))
+        self.assertIsNone(parse_tag("0021"))
+
+    def test_le_tag_privada_do_arquivo(self):
+        caminho = next(iter_dicom_files(self.dataset_dir))
+        ds = pydicom.dcmread(caminho)
+        bloco = ds.private_block(0x0021, "FABRICANTE TESTE", create=True)
+        bloco.add_new(0x04, "DS", "4.7")
+
+        # VR "DS" vira float nativo, como em qualquer outra tag decimal.
+        registro = extract_metadata(ds, extra_tags=["0021,1004"])
+        self.assertEqual(registro["0021,1004"], 4.7)
+
+    def test_tag_privada_ausente_nao_quebra(self):
+        ds = pydicom.dcmread(next(iter_dicom_files(self.dataset_dir)))
+        self.assertIsNone(extract_metadata(ds, extra_tags=["0099,9999"])["0099,9999"])
+
+
+class TestTagsDeFluoroscopia(unittest.TestCase):
+    """RF/XA precisam de tempo de fluoro e número de disparos; CR/DX não."""
+
+    def test_rf_e_xa_tem_tempo_de_fluoroscopia(self):
+        for modalidade in ("RF", "XA"):
+            tags = tags_for_modality(modalidade)
+            self.assertIn("TotalTimeOfFluoroscopy", tags)
+            self.assertIn("TotalNumberOfExposures", tags)
+            self.assertIn("ImageAndFluoroscopyAreaDoseProduct", tags)
+
+    def test_cr_e_dx_mantem_o_conjunto_de_radiografia(self):
+        for modalidade in ("CR", "DX"):
+            tags = tags_for_modality(modalidade)
+            self.assertIn("ExposureIndex", tags)
+            self.assertNotIn("TotalTimeOfFluoroscopy", tags)
+
+    def test_keywords_existem_no_dicionario_dicom(self):
+        from pydicom.datadict import tag_for_keyword
+
+        for modalidade in MODALITY_TAGS:
+            for keyword in tags_for_modality(modalidade):
+                self.assertIsNotNone(
+                    tag_for_keyword(keyword), f"{modalidade}: {keyword} não existe"
+                )
 
 
 class TestProtocoloEM(unittest.TestCase):

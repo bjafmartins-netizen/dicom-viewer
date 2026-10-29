@@ -27,6 +27,7 @@ from .extract_metadata import (
     COMMON_TAGS,
     add_derived_fields,
     iter_dicom_files,
+    parse_tag,
     tags_for_modality,
 )
 
@@ -129,6 +130,14 @@ class OrthancClient:
         """Tags de uma instância no formato ``{keyword: valor}``."""
         return self._get_json(f"/instances/{instance_id}/simplified-tags")
 
+    def instance_raw_tags(self, instance_id: str) -> Dict[str, Any]:
+        """Tags cruas, indexadas por ``"GGGG,EEEE"``.
+
+        É o único jeito de chegar às tags privadas dos fabricantes: elas não
+        aparecem em ``simplified-tags``, que só traz o que tem keyword.
+        """
+        return self._get_json(f"/instances/{instance_id}/tags")
+
     def scan_metadata(
         self,
         extra_tags: Optional[Iterable[str]] = None,
@@ -138,11 +147,17 @@ class OrthancClient:
 
         Evita reabrir os arquivos brutos quando eles já estão no miniPACS.
         """
+        extras = list(extra_tags or ())
+        # Tag pedida por número (privada de fabricante) não existe em
+        # simplified-tags; só nas tags cruas, que custam uma requisição a mais.
+        numericas = {t: parse_tag(t) for t in extras if parse_tag(t) is not None}
+
         records: List[Dict[str, Any]] = []
         instances = self.list_instances()
         for index, instance_id in enumerate(instances, start=1):
             try:
                 tags = self.instance_tags(instance_id)
+                cruas = self.instance_raw_tags(instance_id) if numericas else {}
             except OrthancError as exc:
                 if verbose:
                     print(f"  ignorada {instance_id}: {exc}", file=sys.stderr)
@@ -150,11 +165,14 @@ class OrthancClient:
 
             record: Dict[str, Any] = {"OrthancInstanceID": instance_id}
             for keyword in COMMON_TAGS:
-                record[keyword] = _clean(tags.get(keyword))
+                record[keyword] = _clean(_lookup(tags, keyword))
             for keyword in tags_for_modality(record.get("Modality")):
-                record[keyword] = _clean(tags.get(keyword))
-            for keyword in extra_tags or ():
-                record[keyword] = _clean(tags.get(keyword))
+                record[keyword] = _clean(_lookup(tags, keyword))
+            for keyword in extras:
+                if keyword in numericas:
+                    record[keyword] = _clean(_lookup_raw(cruas, numericas[keyword]))
+                else:
+                    record[keyword] = _clean(_lookup(tags, keyword))
             add_derived_fields(record)
             records.append(record)
 
@@ -229,6 +247,27 @@ class OrthancClient:
                 if verbose:
                     print(f"  falha em {path}: {exc}", file=sys.stderr)
         return sent, failed
+
+
+def _lookup(tags: Dict[str, Any], keyword: str) -> Any:
+    """Valor de uma keyword nas simplified-tags.
+
+    O Orthanc prefixa com ``RETIRED_`` as tags aposentadas pelo padrão
+    (ex. ``TotalTimeOfFluoroscopy``), enquanto o pydicom usa o nome sem
+    prefixo. Sem esta ponte, a mesma tag sairia só num dos dois caminhos.
+    """
+    if keyword in tags:
+        return tags[keyword]
+    return tags.get(f"RETIRED_{keyword}")
+
+
+def _lookup_raw(cruas: Dict[str, Any], numero: int) -> Any:
+    """Valor de uma tag nas tags cruas do Orthanc (``{"GGGG,EEEE": {...}}``)."""
+    entrada = cruas.get(f"{numero >> 16:04x},{numero & 0xFFFF:04x}")
+    if not isinstance(entrada, dict):
+        return None
+    valor = entrada.get("Value")
+    return valor if not isinstance(valor, (dict, list)) else None
 
 
 def _prefer_ipv4(url: str) -> str:
