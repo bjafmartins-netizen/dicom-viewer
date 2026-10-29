@@ -68,15 +68,26 @@ Detalhes e solução de problemas em `pacs/README.md`.
 ### Extração de metadados — `metadata/extract_metadata.py`
 
 Varre uma pasta (ou consulta o Orthanc) e consolida as tags em CSV/JSON/Parquet.
+Um exame inteiro — ou vários — sai num arquivo só: aponte para a pasta que os
+contém e a varredura entra nas subpastas sozinha.
+
 Além do conjunto comum (paciente, estudo, série, equipamento, geometria), traz
-as tags de aquisição específicas da modalidade: TR/TE/FA/campo em RM, kVp/mAs/
-pitch/kernel em TC, índice de exposição em RX/DX, força de compressão em MG etc.
+as tags de aquisição específicas da modalidade: TR/TE/FA/banda/matriz/SAR em RM,
+kVp/mAs/pitch/kernel/CTDIvol em TC, índice de exposição e DAP em RX/DX/RF/XA,
+força de compressão em MG etc. Acrescenta ainda o que o DICOM não guarda pronto:
+plano do corte (`ImagePlane`), resolução no plano e matriz.
 
 ```bash
 python -m metadata.extract_metadata --input data/phantom --output metadata.csv
+python -m metadata.extract_metadata --input data/phantom -o series.csv --nivel serie
 python -m metadata.extract_metadata --orthanc http://localhost:8042 -o tudo.json
 python -m metadata.extract_metadata -i data/ -o m.csv --tag InstitutionalDepartmentName
 ```
+
+Com `--nivel serie`, cada linha é uma série (protocolo, aquisição,
+reconstrução, dose) em vez de uma imagem, com `InstanceCount` e a faixa de
+cortes. Valor que varia dentro da série aparece como `B30f | B70f`, nunca
+reduzido a um só escondido.
 
 Como biblioteca:
 
@@ -158,7 +169,7 @@ editado nada. O `core.filemode false` vale só para este repositório.
 python -m unittest discover -s tests -v
 ```
 
-25 testes, sem dependência de Orthanc rodando (o cliente é testado contra um
+31 testes, sem dependência de Orthanc rodando (o cliente é testado contra um
 servidor HTTP de mentira) nem de arquivos DICOM externos (gerados na hora).
 
 ## Status

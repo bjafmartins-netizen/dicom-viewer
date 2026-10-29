@@ -102,6 +102,7 @@ COMMON_TAGS: Sequence[str] = (
 MODALITY_TAGS: Dict[str, Sequence[str]] = {
     "MR": (
         "MagneticFieldStrength",
+        "ImagingFrequency",
         "ScanningSequence",
         "SequenceVariant",
         "ScanOptions",
@@ -116,8 +117,12 @@ MODALITY_TAGS: Dict[str, Sequence[str]] = {
         "NumberOfAverages",
         "PixelBandwidth",
         "PercentPhaseFieldOfView",
+        "PercentSampling",
         "AcquisitionMatrix",
+        "NumberOfPhaseEncodingSteps",
         "InPlanePhaseEncodingDirection",
+        "AcquisitionDuration",
+        "SAR",
         "ReceiveCoilName",
         "TransmitCoilName",
         "DiffusionBValue",
@@ -130,10 +135,15 @@ MODALITY_TAGS: Dict[str, Sequence[str]] = {
         "ExposureTime",
         "Exposure",
         "CTDIvol",
+        "WaterEquivalentDiameter",
+        "EstimatedDoseSaving",
         "ConvolutionKernel",
+        "ReconstructionAlgorithm",
         "ReconstructionDiameter",
         "DataCollectionDiameter",
+        "AcquisitionNumber",
         "SpiralPitchFactor",
+        "RevolutionTime",
         "TableFeedPerRotation",
         "SingleCollimationWidth",
         "TotalCollimationWidth",
@@ -197,13 +207,22 @@ _XRAY_TAGS: Sequence[str] = (
     "DeviationIndex",
     "TargetExposureIndex",
     "EntranceDoseInmGy",
+    # Produto kerma-área (DAP) — a grandeza de dose dos equipamentos de RX,
+    # fluoroscopia e angiografia.
+    "ImageAndFluoroscopyAreaDoseProduct",
+    "RelativeXRayExposure",
+    "ExposureControlMode",
+    "ExposureControlModeDescription",
     "DetectorType",
     "DetectorID",
     "ViewPosition",
     "GridID",
     "DistanceSourceToDetector",
     "DistanceSourceToPatient",
+    "DistanceSourceToEntrance",
+    "AnodeTargetMaterial",
     "FilterMaterial",
+    "FocalSpots",
     "BodyPartThickness",
 )
 for _mod in ("CR", "DX", "RF", "XA"):
@@ -254,6 +273,57 @@ def _get(ds: "Dataset", keyword: str) -> Any:
         return None
 
 
+def image_plane(orientation: Any) -> Optional[str]:
+    """Plano de corte a partir do ImageOrientationPatient.
+
+    O DICOM não guarda "axial/sagital/coronal" em lugar nenhum: isso se deduz
+    da normal do plano (produto vetorial das duas direções da imagem). Quando
+    a normal não está a menos de ~45° de nenhum eixo, o corte é oblíquo.
+    """
+    if not isinstance(orientation, (list, tuple)) or len(orientation) < 6:
+        return None
+    try:
+        row = [float(v) for v in orientation[:3]]
+        col = [float(v) for v in orientation[3:6]]
+    except (TypeError, ValueError):
+        return None
+
+    normal = (
+        row[1] * col[2] - row[2] * col[1],
+        row[2] * col[0] - row[0] * col[2],
+        row[0] * col[1] - row[1] * col[0],
+    )
+    eixo = max(range(3), key=lambda i: abs(normal[i]))
+    if abs(normal[eixo]) < 0.7071:  # cos(45°)
+        return "OBLIQUO"
+    return ("SAGITAL", "CORONAL", "AXIAL")[eixo]
+
+
+def _resolution_mm(record: Dict[str, Any]) -> Optional[str]:
+    """Resolução no plano como ``0.5x0.5`` (mm), a partir do PixelSpacing."""
+    spacing = record.get("PixelSpacing")
+    if not isinstance(spacing, (list, tuple)) or len(spacing) < 2:
+        return None
+    try:
+        return "x".join(f"{float(v):g}" for v in spacing[:2])
+    except (TypeError, ValueError):
+        return None
+
+
+def add_derived_fields(record: Dict[str, Any]) -> Dict[str, Any]:
+    """Acrescenta ao registro o que o DICOM não guarda pronto.
+
+    Plano do corte, resolução no plano e matriz — o que se olha primeiro ao
+    revisar um protocolo. Usada pelos dois caminhos (arquivo e Orthanc) para
+    que as duas saídas tenham as mesmas colunas.
+    """
+    record["ImagePlane"] = image_plane(record.get("ImageOrientationPatient"))
+    record["InPlaneResolutionMM"] = _resolution_mm(record)
+    rows, columns = record.get("Rows"), record.get("Columns")
+    record["MatrixRowsColumns"] = f"{rows}x{columns}" if rows and columns else None
+    return record
+
+
 def tags_for_modality(modality: Optional[str]) -> Sequence[str]:
     """Tags específicas da modalidade (vazio se modalidade desconhecida)."""
     if not modality:
@@ -300,6 +370,8 @@ def extract_metadata(
 
     for keyword in extra_tags or ():
         record[keyword] = _get(ds, keyword)
+
+    add_derived_fields(record)
 
     # Informação útil que não é uma tag direta.
     # Nota: a varredura lê os cabeçalhos com stop_before_pixels=True (rápido),
@@ -358,6 +430,94 @@ def scan_folder(
         if verbose:
             print(f"  lido: {path}", file=sys.stderr)
     return records
+
+
+#: Colunas que descrevem a imagem, não a série — não fazem sentido numa linha
+#: por série e por isso são substituídas por contagens/intervalos.
+INSTANCE_ONLY_COLUMNS = frozenset({
+    "SOPInstanceUID",
+    "InstanceNumber",
+    "SliceLocation",
+    "ImagePositionPatient",
+    "FilePath",
+    "FileName",
+    "FileSizeBytes",
+    "OrthancInstanceID",
+    "AcquisitionTime",
+    "ContentTime",
+})
+
+
+def _summarize(values: List[Any]) -> Any:
+    """Resume os valores de uma coluna dentro da série.
+
+    Constante → o próprio valor. Variando → os valores distintos separados
+    por ``|`` (até 5) ou ``<n> valores distintos``. Nunca escolhe um valor
+    silenciosamente: a variação precisa aparecer na planilha.
+    """
+    distintos: List[Any] = []
+    for value in values:
+        if value is None or value == "":
+            continue
+        chave = _flatten(value)
+        if chave not in [_flatten(v) for v in distintos]:
+            distintos.append(value)
+
+    if not distintos:
+        return None
+    if len(distintos) == 1:
+        return distintos[0]
+    if len(distintos) <= 5:
+        return " | ".join(str(_flatten(v)) for v in distintos)
+    return f"{len(distintos)} valores distintos"
+
+
+def group_by_series(records: Sequence[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Consolida os registros por série: uma linha por série, não por imagem.
+
+    Mantém as colunas da série (protocolo, parâmetros de aquisição,
+    reconstrução, dose) e acrescenta ``InstanceCount`` e a faixa de posição
+    dos cortes. Séries sem SeriesInstanceUID caem num grupo próprio por
+    arquivo, para não se misturarem.
+    """
+    grupos: Dict[Any, List[Dict[str, Any]]] = {}
+    for index, record in enumerate(records):
+        chave = record.get("SeriesInstanceUID") or f"__sem_serie_{index}"
+        grupos.setdefault(chave, []).append(record)
+
+    colunas = [c for c in _columns(records) if c not in INSTANCE_ONLY_COLUMNS]
+    resumo: List[Dict[str, Any]] = []
+    for instancias in grupos.values():
+        linha: Dict[str, Any] = {}
+        for coluna in colunas:
+            linha[coluna] = _summarize([i.get(coluna) for i in instancias])
+        linha["InstanceCount"] = len(instancias)
+
+        localizacoes = []
+        for i in instancias:
+            try:
+                localizacoes.append(float(i.get("SliceLocation")))
+            except (TypeError, ValueError):
+                continue
+        linha["SliceLocationMin"] = min(localizacoes) if localizacoes else None
+        linha["SliceLocationMax"] = max(localizacoes) if localizacoes else None
+        resumo.append(linha)
+
+    resumo.sort(
+        key=lambda r: (
+            str(r.get("PatientID") or ""),
+            str(r.get("StudyInstanceUID") or ""),
+            _sort_number(r.get("SeriesNumber")),
+        )
+    )
+    return resumo
+
+
+def _sort_number(value: Any) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return float("inf")
 
 
 def to_dataframe(records: Sequence[Dict[str, Any]]):
@@ -461,6 +621,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Tag extra a extrair (keyword DICOM). Pode repetir.",
     )
     parser.add_argument(
+        "--nivel", choices=("instancia", "serie"), default="instancia",
+        help="Granularidade da saída: uma linha por imagem (padrão) ou uma "
+             "linha por série, com InstanceCount e os valores que variam "
+             "dentro da série marcados.",
+    )
+    parser.add_argument(
         "--orthanc", metavar="URL",
         help="Em vez de ler arquivos, consulta as tags via API REST do Orthanc "
              "(ex.: http://localhost:8042).",
@@ -498,14 +664,23 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         print("Nenhum arquivo DICOM válido encontrado.", file=sys.stderr)
         return 1
 
+    instancias = len(records)
+    if args.nivel == "serie":
+        records = group_by_series(records)
+
     if args.output:
         write_records(records, args.output)
         if not args.quiet:
             studies = {r.get("StudyInstanceUID") for r in records}
             series = {r.get("SeriesInstanceUID") for r in records}
+            linhas = (
+                f"{len(records)} linha(s), uma por série"
+                if args.nivel == "serie"
+                else f"{len(records)} linha(s), uma por imagem"
+            )
             print(
-                f"{len(records)} instância(s), {len(series)} série(s), "
-                f"{len(studies)} estudo(s) -> {args.output}"
+                f"{instancias} instância(s), {len(series)} série(s), "
+                f"{len(studies)} estudo(s) -> {linhas} em {args.output}"
             )
     else:
         print(json.dumps(records, ensure_ascii=False, indent=2, default=str))

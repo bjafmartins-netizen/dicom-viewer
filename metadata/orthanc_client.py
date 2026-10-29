@@ -23,7 +23,12 @@ import urllib.request
 import uuid
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
-from .extract_metadata import COMMON_TAGS, iter_dicom_files, tags_for_modality
+from .extract_metadata import (
+    COMMON_TAGS,
+    add_derived_fields,
+    iter_dicom_files,
+    tags_for_modality,
+)
 
 DEFAULT_URL = "http://localhost:8042"
 
@@ -130,6 +135,7 @@ class OrthancClient:
                 record[keyword] = _clean(tags.get(keyword))
             for keyword in extra_tags or ():
                 record[keyword] = _clean(tags.get(keyword))
+            add_derived_fields(record)
             records.append(record)
 
             if verbose and index % 50 == 0:

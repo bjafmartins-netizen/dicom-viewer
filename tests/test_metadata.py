@@ -27,6 +27,8 @@ from metadata.anonymize import (  # noqa: E402
 )
 from metadata.extract_metadata import (  # noqa: E402
     extract_metadata,
+    group_by_series,
+    image_plane,
     iter_dicom_files,
     scan_folder,
     write_records,
@@ -133,6 +135,56 @@ class TestExtractMetadata(PhantomBase):
             self.assertEqual(len(registros), self.slices * 2)
         finally:
             os.remove(lixo)
+
+
+class TestPlanoDeCorte(unittest.TestCase):
+    """Plano deduzido da orientação — o DICOM não traz essa informação pronta."""
+
+    def test_planos_ortogonais(self):
+        self.assertEqual(image_plane([1, 0, 0, 0, 1, 0]), "AXIAL")
+        self.assertEqual(image_plane([0, 1, 0, 0, 0, -1]), "SAGITAL")
+        self.assertEqual(image_plane([1, 0, 0, 0, 0, -1]), "CORONAL")
+
+    def test_obliquo_e_ausente(self):
+        self.assertEqual(image_plane([0.7, 0.7, 0, 0, 0, -1]), "OBLIQUO")
+        self.assertIsNone(image_plane(None))
+        self.assertIsNone(image_plane([1, 0, 0]))  # incompleto
+        self.assertIsNone(image_plane(["a", "b", "c", "d", "e", "f"]))
+
+
+class TestNivelSerie(PhantomBase):
+    """Uma linha por série, em vez de uma por imagem."""
+
+    def test_uma_linha_por_serie_com_contagem(self):
+        series = group_by_series(scan_folder(self.dataset_dir))
+        self.assertEqual(len(series), 2)  # CT + MR
+        self.assertEqual({s["InstanceCount"] for s in series}, {self.slices})
+        self.assertEqual({s["Modality"] for s in series}, {"CT", "MR"})
+
+    def test_colunas_de_instancia_somem_e_faixa_aparece(self):
+        linha = group_by_series(scan_folder(self.dataset_dir))[0]
+        for coluna in ("SOPInstanceUID", "InstanceNumber", "FilePath", "SliceLocation"):
+            self.assertNotIn(coluna, linha)
+        self.assertLess(linha["SliceLocationMin"], linha["SliceLocationMax"])
+
+    def test_parametros_da_serie_sao_preservados(self):
+        series = group_by_series(scan_folder(self.dataset_dir))
+        mr = next(s for s in series if s["Modality"] == "MR")
+        ct = next(s for s in series if s["Modality"] == "CT")
+        self.assertEqual(mr["RepetitionTime"], 4500.0)
+        self.assertEqual(mr["ImagePlane"], "AXIAL")
+        self.assertEqual(mr["MatrixRowsColumns"], f"{self.size}x{self.size}")
+        self.assertEqual(ct["KVP"], 120.0)
+        self.assertTrue(ct["ConvolutionKernel"])
+
+    def test_valor_que_varia_na_serie_nao_e_escondido(self):
+        registros = [
+            {"SeriesInstanceUID": "s1", "ConvolutionKernel": "B30f"},
+            {"SeriesInstanceUID": "s1", "ConvolutionKernel": "B70f"},
+        ]
+        linha = group_by_series(registros)[0]
+        self.assertEqual(linha["ConvolutionKernel"], "B30f | B70f")
+        self.assertEqual(linha["InstanceCount"], 2)
 
 
 class TestAnonymize(PhantomBase):

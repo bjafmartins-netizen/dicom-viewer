@@ -157,13 +157,41 @@ resultado aparece na tela em JSON. Uma linha por imagem, uma coluna por tag.
 python -m metadata.extract_metadata --input data\phantom\CT\CT_0001.dcm --output metadados_CT_0001.csv
 ```
 
-### De uma série, estudo ou pasta inteira
+### De um exame inteiro (ou de vários)
+
+Aponte para a pasta que contém o exame — ou a que contém vários exames. A
+varredura entra nas subpastas sozinha e sai tudo num CSV só, com
+`StudyInstanceUID` e `SeriesInstanceUID` separando o que é de cada um:
 
 ```cmd
-python -m metadata.extract_metadata --input data\phantom --output metadados.csv
+python -m metadata.extract_metadata --input D:\exames --output metadados.csv
 ```
 
 `--no-recursive` limita à pasta indicada, sem subpastas.
+
+### Uma linha por série (em vez de uma por imagem)
+
+Por padrão sai uma linha por imagem, então um exame de 300 cortes vira 300
+linhas. Para revisar protocolo, use `--nivel serie`:
+
+```cmd
+python -m metadata.extract_metadata --input D:\exames --output series.csv --nivel serie
+```
+
+Cada linha é uma série, com as colunas do protocolo e da aquisição, mais:
+
+| Coluna | Conteúdo |
+|---|---|
+| `InstanceCount` | quantas imagens a série tem |
+| `SliceLocationMin` / `SliceLocationMax` | faixa coberta pelos cortes |
+| `ImagePlane` | AXIAL, CORONAL, SAGITAL ou OBLIQUO (deduzido da orientação) |
+| `InPlaneResolutionMM` | resolução no plano, ex. `0.5x0.5` |
+| `MatrixRowsColumns` | matriz da imagem, ex. `256x256` |
+
+As colunas que só fazem sentido por imagem (`SOPInstanceUID`,
+`InstanceNumber`, `SliceLocation`, `FilePath`) não aparecem. Quando um valor
+**muda dentro da série** — dois kernels de reconstrução, por exemplo — a
+célula mostra os dois (`B30f | B70f`) em vez de escolher um escondido.
 
 ### De tudo o que está no servidor
 
