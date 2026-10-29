@@ -222,7 +222,38 @@ python -m metadata.extract_metadata --input data\phantom --output metadados.parq
 
 ---
 
-## 6. Miniaturas (PNG)
+## 6. Conferir protocolo de esclerose múltipla
+
+Verifica se um exame de RM tem as sequências mínimas para aplicar os critérios
+de McDonald 2024:
+
+```cmd
+python scripts\check_ms_protocol.py --study 1.3.12.2.1107.5.8.15.131195.3000002609
+```
+
+| Opção | Efeito |
+|---|---|
+| `--study ID` | um estudo: aceita o StudyInstanceUID ou o ID do Orthanc |
+| `--todos` | avalia todos os estudos do servidor |
+| `--input pasta` | lê os arquivos direto da pasta, sem o Orthanc |
+
+O que ele decide:
+
+- **Bloqueia** quando falta FLAIR 3D ou T1 pós-contraste.
+- **Só alerta** quando falta SWI/T2* — o exame segue, mas sem o Sinal da Veia
+  Central.
+- Informa se há cobertura do nervo óptico.
+
+Reconhece a sequência pela descrição e pelo nome do protocolo, com as marcas
+dos fabricantes (SPACE, CUBE, VISTA, MPRAGE). Quando o nome não diz que é
+volumétrica, confere `MRAcquisitionType` no cabeçalho.
+
+Código de saída: `0` viável, `1` bloqueado, `2` erro de uso — dá para usar em
+automação.
+
+---
+
+## 7. Miniaturas (PNG)
 
 Uma imagem por série (o corte do meio), com a janela do próprio arquivo:
 
@@ -237,7 +268,7 @@ python -m metadata.thumbnails --input data\phantom --output thumbs
 
 ---
 
-## 7. Visualizador legado (um arquivo, sem servidor)
+## 8. Visualizador legado (um arquivo, sem servidor)
 
 ```cmd
 python viewer_legacy\sico.py
@@ -247,7 +278,7 @@ Abre uma janela para escolher e ver um arquivo DICOM por vez.
 
 ---
 
-## 8. Testes
+## 9. Testes
 
 ```cmd
 python -m unittest discover -s tests -v
@@ -257,7 +288,7 @@ Não precisam do Orthanc rodando nem de exames externos.
 
 ---
 
-## 9. Git (manter igual ao GitHub)
+## 10. Git (manter igual ao GitHub)
 
 ```cmd
 git status

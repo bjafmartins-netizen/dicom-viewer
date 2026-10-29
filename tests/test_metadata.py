@@ -35,6 +35,7 @@ from metadata.extract_metadata import (  # noqa: E402
 )
 from metadata.thumbnails import thumbnails_for_folder  # noqa: E402
 
+import check_ms_protocol  # noqa: E402
 import make_phantom_dataset  # noqa: E402
 
 
@@ -185,6 +186,44 @@ class TestNivelSerie(PhantomBase):
         linha = group_by_series(registros)[0]
         self.assertEqual(linha["ConvolutionKernel"], "B30f | B70f")
         self.assertEqual(linha["InstanceCount"], 2)
+
+
+class TestProtocoloEM(unittest.TestCase):
+    """Conferência do protocolo mínimo de esclerose múltipla."""
+
+    @staticmethod
+    def _series(*descricoes, acquisition_type=""):
+        return [
+            {"MainDicomTags": {"SeriesDescription": d, "MRAcquisitionType": acquisition_type}}
+            for d in descricoes
+        ]
+
+    def test_protocolo_completo_passa(self):
+        series = self._series(
+            "T2 FLAIR SPACE SAG", "T1 MPRAGE POS GD", "SWI VENOSO", "AX T2 ORBITAS"
+        )
+        self.assertTrue(check_ms_protocol.evaluate_ms_protocol(series, verbose=False))
+
+    def test_falta_de_swi_alerta_mas_nao_bloqueia(self):
+        series = self._series("3D FLAIR", "T1 +C")
+        self.assertTrue(check_ms_protocol.evaluate_ms_protocol(series, verbose=False))
+
+    def test_falta_de_flair_3d_bloqueia(self):
+        series = self._series("AX FLAIR 2D", "T1 POS GD", "SWI")
+        self.assertFalse(check_ms_protocol.evaluate_ms_protocol(series, verbose=False))
+
+    def test_falta_de_t1_com_contraste_bloqueia(self):
+        series = self._series("T2 FLAIR CUBE", "T1 SAG", "SWI")
+        self.assertFalse(check_ms_protocol.evaluate_ms_protocol(series, verbose=False))
+
+    def test_3d_vem_do_cabecalho_quando_o_nome_nao_diz(self):
+        # Descrição sem marca de volumétrica, mas MRAcquisitionType=3D
+        series = self._series("FLAIR DARK FLUID", acquisition_type="3D")
+        series += self._series("T1 GD")
+        self.assertTrue(check_ms_protocol.evaluate_ms_protocol(series, verbose=False))
+
+    def test_protocolo_vazio_bloqueia(self):
+        self.assertFalse(check_ms_protocol.evaluate_ms_protocol([], verbose=False))
 
 
 class TestAnonymize(PhantomBase):

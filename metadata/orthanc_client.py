@@ -105,6 +105,26 @@ class OrthancClient:
     def list_studies(self) -> List[str]:
         return self._get_json("/studies")
 
+    def study_series(self, study_id: str) -> List[Dict[str, Any]]:
+        """Séries de um estudo, cada uma com ``MainDicomTags`` e ``Instances``."""
+        return self._get_json(f"/studies/{study_id}/series")
+
+    def study_tags(self, study_id: str) -> Dict[str, Any]:
+        """Dados do estudo (``MainDicomTags`` + ``PatientMainDicomTags``)."""
+        return self._get_json(f"/studies/{study_id}")
+
+    def lookup(self, dicom_uid: str) -> List[Dict[str, Any]]:
+        """Encontra recursos a partir de um UID DICOM (StudyInstanceUID etc.)."""
+        raw = self._request("POST", "/tools/lookup", dicom_uid.encode("utf-8"), "text/plain")
+        return json.loads(raw.decode("utf-8")) if raw else []
+
+    def resolve_study(self, identifier: str) -> str:
+        """Aceita tanto o ID do Orthanc quanto o StudyInstanceUID."""
+        for found in self.lookup(identifier):
+            if found.get("Type") == "Study":
+                return found["ID"]
+        return identifier  # já é um ID do Orthanc (ou vai falhar adiante)
+
     def instance_tags(self, instance_id: str) -> Dict[str, Any]:
         """Tags de uma instância no formato ``{keyword: valor}``."""
         return self._get_json(f"/instances/{instance_id}/simplified-tags")

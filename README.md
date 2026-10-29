@@ -18,7 +18,7 @@ pacs/           Orthanc portátil — o servidor (DICOM + DICOMweb + storage)
 metadata/       extração de metadados, anonimização, miniaturas, cliente REST
 viewer-ohif/    configuração do OHIF Viewer apontando para o Orthanc local
 viewer_legacy/  sico.py — visualizador de arquivo único (Tkinter)
-scripts/        automação: subir tudo, importar pasta, gerar dataset de teste
+scripts/        automação: subir tudo, importar pasta, dataset de teste, protocolo EM
 tests/          testes (não precisam de Orthanc nem de arquivo DICOM externo)
 data/           área de trabalho para os exames (não versionada)
 ```
@@ -136,6 +136,23 @@ arquivo; sem janela definida, ajusta por percentis 2–98%.
 python -m metadata.thumbnails --input data/phantom --output thumbs/ --size 256
 ```
 
+### Protocolo de esclerose múltipla — `scripts/check_ms_protocol.py`
+
+Confere se um exame de RM tem as sequências mínimas para aplicar os critérios
+de McDonald 2024. Bloqueia na falta de FLAIR 3D ou T1 pós-contraste, apenas
+alerta na falta de SWI/T2*, e informa a cobertura do nervo óptico.
+
+```bash
+python scripts/check_ms_protocol.py --study <StudyInstanceUID ou ID do Orthanc>
+python scripts/check_ms_protocol.py --todos
+python scripts/check_ms_protocol.py --input data/exame     # sem o servidor
+```
+
+Reconhece a sequência pela descrição e pelo protocolo, com as marcas dos
+fabricantes (SPACE, CUBE, VISTA, MPRAGE); quando o nome não diz que é
+volumétrica, confere `MRAcquisitionType`. Sai com `0` viável, `1` bloqueado,
+`2` erro de uso.
+
 ### Dataset de teste — `scripts/make_phantom_dataset.py`
 
 Gera um estudo sintético com duas séries (CT em HU e MR com TR/TE), sem
@@ -169,7 +186,7 @@ editado nada. O `core.filemode false` vale só para este repositório.
 python -m unittest discover -s tests -v
 ```
 
-31 testes, sem dependência de Orthanc rodando (o cliente é testado contra um
+37 testes, sem dependência de Orthanc rodando (o cliente é testado contra um
 servidor HTTP de mentira) nem de arquivos DICOM externos (gerados na hora).
 
 ## Status
