@@ -213,6 +213,13 @@ Cada linha é uma série, com as colunas do protocolo e da aquisição, mais:
 | `ImagePlane` | AXIAL, CORONAL, SAGITAL ou OBLIQUO (deduzido da orientação) |
 | `InPlaneResolutionMM` | resolução no plano, ex. `0.5x0.5` |
 | `MatrixRowsColumns` | matriz da imagem, ex. `256x256` |
+| `AcquisitionMatrixFreqPhase` | matriz de aquisição como frequência x fase, ex. `384x256` |
+| `PhaseEncodingAxis` | direção de fase no paciente: `A-P`, `R-L`, `F-H` ou `OBLIQUO` |
+
+> O DICOM guarda a direção de fase só como `ROW`/`COL`
+> (`InPlanePhaseEncodingDirection`), relativo à matriz — o mesmo `ROW` é
+> latero-lateral num corte coronal e ântero-posterior num sagital. O
+> `PhaseEncodingAxis` resolve isso cruzando com a orientação do corte.
 
 As colunas que só fazem sentido por imagem (`SOPInstanceUID`,
 `InstanceNumber`, `SliceLocation`, `FilePath`) não aparecem. Quando um valor

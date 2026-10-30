@@ -27,6 +27,8 @@ _EXPORTS = {
     "extract_metadata": "extract_metadata",
     "group_by_series": "extract_metadata",
     "image_plane": "extract_metadata",
+    "phase_encoding_axis": "extract_metadata",
+    "acquisition_matrix_freq_phase": "extract_metadata",
     "iter_dicom_files": "extract_metadata",
     "scan_folder": "extract_metadata",
     "to_dataframe": "extract_metadata",

@@ -357,6 +357,65 @@ def image_plane(orientation: Any) -> Optional[str]:
     return ("SAGITAL", "CORONAL", "AXIAL")[eixo]
 
 
+#: Eixos do paciente no sistema LPS do DICOM: +x = esquerda, +y = posterior,
+#: +z = cabeça. O rótulo sai no sentido usado no console do equipamento.
+_EIXOS_ANATOMICOS = ("R-L", "A-P", "F-H")
+
+
+def phase_encoding_axis(record: Dict[str, Any]) -> Optional[str]:
+    """Direção de fase em termos anatômicos (``A-P``, ``R-L``, ``F-H``).
+
+    O DICOM só guarda ``ROW`` ou ``COL`` em InPlanePhaseEncodingDirection —
+    relativo à matriz, não ao paciente. Para saber se o deslocamento químico e
+    o artefato de dobra caem em ântero-posterior ou latero-lateral, é preciso
+    cruzar com o ImageOrientationPatient: ``ROW`` significa fase ao longo da
+    primeira direção da imagem, ``COL`` ao longo da segunda.
+    """
+    direcao = record.get("InPlanePhaseEncodingDirection")
+    orientation = record.get("ImageOrientationPatient")
+    if not isinstance(direcao, str):
+        return None
+    if not isinstance(orientation, (list, tuple)) or len(orientation) < 6:
+        return None
+
+    pedaco = {"ROW": orientation[:3], "COL": orientation[3:6]}.get(direcao.strip().upper())
+    if pedaco is None:
+        return None  # "OTHER" e afins: o padrão permite, e não há o que deduzir
+    try:
+        vetor = [float(v) for v in pedaco]
+    except (TypeError, ValueError):
+        return None
+
+    eixo = max(range(3), key=lambda i: abs(vetor[i]))
+    if abs(vetor[eixo]) < 0.7071:  # cos(45°) — fase num eixo oblíquo
+        return "OBLIQUO"
+    return _EIXOS_ANATOMICOS[eixo]
+
+
+def acquisition_matrix_freq_phase(matrix: Any) -> Optional[str]:
+    """AcquisitionMatrix como ``frequência x fase``, ex. ``384x256``.
+
+    A tag vem com quatro valores — (linhas de frequência, colunas de
+    frequência, linhas de fase, colunas de fase) — e dois deles são zero,
+    conforme a fase esteja na linha ou na coluna. Aqui sai só o par que
+    importa, na ordem frequência x fase.
+    """
+    if not isinstance(matrix, (list, tuple)) or len(matrix) < 4:
+        return None
+    try:
+        freq_linhas, freq_colunas, fase_linhas, fase_colunas = (
+            int(float(v)) for v in matrix[:4]
+        )
+    except (TypeError, ValueError):
+        return None
+
+    frequencia = freq_linhas or freq_colunas
+    fase = fase_linhas or fase_colunas
+    if not frequencia or not fase:
+        return None
+    return f"{frequencia}x{fase}"
+
+
 def _resolution_mm(record: Dict[str, Any]) -> Optional[str]:
     """Resolução no plano como ``0.5x0.5`` (mm), a partir do PixelSpacing."""
     spacing = record.get("PixelSpacing")
@@ -371,14 +430,19 @@ def _resolution_mm(record: Dict[str, Any]) -> Optional[str]:
 def add_derived_fields(record: Dict[str, Any]) -> Dict[str, Any]:
     """Acrescenta ao registro o que o DICOM não guarda pronto.
 
-    Plano do corte, resolução no plano e matriz — o que se olha primeiro ao
-    revisar um protocolo. Usada pelos dois caminhos (arquivo e Orthanc) para
-    que as duas saídas tenham as mesmas colunas.
+    Plano do corte, resolução no plano, matriz e direção de fase em termos
+    anatômicos — o que se olha primeiro ao revisar um protocolo. Usada pelos
+    dois caminhos (arquivo e Orthanc) para que as duas saídas tenham as mesmas
+    colunas.
     """
     record["ImagePlane"] = image_plane(record.get("ImageOrientationPatient"))
     record["InPlaneResolutionMM"] = _resolution_mm(record)
     rows, columns = record.get("Rows"), record.get("Columns")
     record["MatrixRowsColumns"] = f"{rows}x{columns}" if rows and columns else None
+    record["PhaseEncodingAxis"] = phase_encoding_axis(record)
+    record["AcquisitionMatrixFreqPhase"] = acquisition_matrix_freq_phase(
+        record.get("AcquisitionMatrix")
+    )
     return record
 
 

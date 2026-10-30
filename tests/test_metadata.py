@@ -27,11 +27,13 @@ from metadata.anonymize import (  # noqa: E402
 )
 from metadata.extract_metadata import (  # noqa: E402
     MODALITY_TAGS,
+    acquisition_matrix_freq_phase,
     extract_metadata,
     group_by_series,
     image_plane,
     iter_dicom_files,
     parse_tag,
+    phase_encoding_axis,
     scan_folder,
     tags_for_modality,
     write_records,
@@ -154,6 +156,79 @@ class TestPlanoDeCorte(unittest.TestCase):
         self.assertIsNone(image_plane(None))
         self.assertIsNone(image_plane([1, 0, 0]))  # incompleto
         self.assertIsNone(image_plane(["a", "b", "c", "d", "e", "f"]))
+
+
+class TestDirecaoDeFase(unittest.TestCase):
+    """ROW/COL do DICOM traduzido para o eixo do paciente."""
+
+    def test_axial_row_e_latero_lateral(self):
+        # Corte axial: a primeira direção da imagem aponta para a esquerda.
+        registro = {
+            "InPlanePhaseEncodingDirection": "ROW",
+            "ImageOrientationPatient": [1, 0, 0, 0, 1, 0],
+        }
+        self.assertEqual(phase_encoding_axis(registro), "R-L")
+
+    def test_axial_col_e_antero_posterior(self):
+        registro = {
+            "InPlanePhaseEncodingDirection": "COL",
+            "ImageOrientationPatient": [1, 0, 0, 0, 1, 0],
+        }
+        self.assertEqual(phase_encoding_axis(registro), "A-P")
+
+    def test_sagital_col_e_cranio_caudal(self):
+        registro = {
+            "InPlanePhaseEncodingDirection": "COL",
+            "ImageOrientationPatient": [0, 1, 0, 0, 0, -1],
+        }
+        self.assertEqual(phase_encoding_axis(registro), "F-H")
+
+    def test_mesmo_row_muda_de_eixo_conforme_o_plano(self):
+        # É justamente isto que ROW/COL sozinho não diz.
+        axial = {"InPlanePhaseEncodingDirection": "ROW",
+                 "ImageOrientationPatient": [1, 0, 0, 0, 1, 0]}
+        sagital = {"InPlanePhaseEncodingDirection": "ROW",
+                   "ImageOrientationPatient": [0, 1, 0, 0, 0, -1]}
+        self.assertNotEqual(phase_encoding_axis(axial), phase_encoding_axis(sagital))
+
+    def test_obliquo_e_faltante(self):
+        self.assertEqual(
+            phase_encoding_axis({
+                "InPlanePhaseEncodingDirection": "ROW",
+                "ImageOrientationPatient": [0.7, 0.7, 0, 0, 0, -1],
+            }),
+            "OBLIQUO",
+        )
+        self.assertIsNone(phase_encoding_axis({}))
+        self.assertIsNone(phase_encoding_axis({
+            "InPlanePhaseEncodingDirection": "OTHER",
+            "ImageOrientationPatient": [1, 0, 0, 0, 1, 0],
+        }))
+        self.assertIsNone(phase_encoding_axis({
+            "InPlanePhaseEncodingDirection": "ROW",
+            "ImageOrientationPatient": None,
+        }))
+
+
+class TestMatrizDeAquisicao(unittest.TestCase):
+    """Os quatro valores do AcquisitionMatrix reduzidos a frequência x fase."""
+
+    def test_fase_na_coluna(self):
+        # (0, 384, 256, 0) — como vem dos equipamentos GE do serviço.
+        self.assertEqual(acquisition_matrix_freq_phase([0, 384, 256, 0]), "384x256")
+
+    def test_fase_na_linha(self):
+        self.assertEqual(acquisition_matrix_freq_phase([256, 0, 0, 192]), "256x192")
+
+    def test_strings_do_orthanc(self):
+        # Pelo servidor os valores chegam como texto.
+        self.assertEqual(acquisition_matrix_freq_phase(["0", "384", "256", "0"]), "384x256")
+
+    def test_ausente_ou_invalido(self):
+        self.assertIsNone(acquisition_matrix_freq_phase(None))
+        self.assertIsNone(acquisition_matrix_freq_phase([0, 384, 256]))
+        self.assertIsNone(acquisition_matrix_freq_phase([0, 0, 0, 0]))
+        self.assertIsNone(acquisition_matrix_freq_phase(["a", "b", "c", "d"]))
 
 
 class TestNivelSerie(PhantomBase):
